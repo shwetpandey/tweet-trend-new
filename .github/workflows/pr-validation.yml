@@ -19,8 +19,9 @@ jobs:
       id: get-build-status
       uses: actions/http-client@v1
       with:
-        url: ${{ "http://localhost:9111/buildConfiguration/TweetTrendNew_Build/106?expandBuildChangesSection=true&hideTestsFromDependencies=false&hideProblemsFromDependencies=false&expandBuildDeploymentsSection=false" }}  # URL to check build status
+        url: "http://localhost:9111/buildConfiguration/TweetTrendNew_Build/106?expandBuildChangesSection=true&hideTestsFromDependencies=false&hideProblemsFromDependencies=false&expandBuildDeploymentsSection=false"  # URL to check build status
         method: GET
+    
 
     - name: Fail or Pass PR Based on Build Status
       id: evaluate-status
