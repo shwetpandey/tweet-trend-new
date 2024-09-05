@@ -1,0 +1,44 @@
+name: Check Build Status
+
+on:
+  pull_request:
+    branches:
+      - 'main'
+
+jobs:
+  check_build_status:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Get Build Status
+      id: get-build-status
+      uses: actions/http-client@v1
+      with:
+        url: ${{ http://localhost:9111/viewType.html?buildTypeId=31 }}  # URL to check build status
+        method: GET
+
+    - name: Fail or Pass PR Based on Build Status
+      id: evaluate-status
+      run: |
+        # Extract the build status from the response
+        STATUS=$(echo "${{ steps.get-build-status.outputs.response }}" | jq -r '.status')  # Adjust if your response format is different
+
+        # Check if the build status is 'SUCCESS'
+        if [ "$STATUS" != "SUCCESS" ]; then
+          echo "Build status is not successful. Failing the workflow."
+          exit 1
+        fi
+        echo "Build status is successful. Proceeding."
+
+    - name: Create Pull Request
+      if: ${{ steps.evaluate-status.outcome == 'success' }}
+      uses: octokit/create-pull-request@v2
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        base: main
+        head: ${{ github.head_ref }}
+        title: 'Pull Request Title'
+        body: 'Pull Request Body'
