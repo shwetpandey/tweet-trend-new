@@ -1,4 +1,4 @@
-name: Check Build Status
+name: Check Build Status and Create PR
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
       - 'main'
 
 jobs:
-  check_build_status:
+  check_and_create_pr:
     runs-on: ubuntu-latest
 
     steps:
@@ -15,20 +15,16 @@ jobs:
 
     - name: Get Build Status
       id: get-build-status
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const fetch = require('node-fetch');
-          const response = await fetch('http://localhost:9111/buildConfiguration/TweetTrendNew_Build/106?expandBuildChangesSection=true&hideTestsFromDependencies=false&hideProblemsFromDependencies=false&expandBuildDeploymentsSection=false');
-          const data = await response.json();
-          console.log('Build status:', data.status);
-          return data.status;
+      run: |
+        # Use curl to fetch build status
+        STATUS=$(curl -s "http://localhost:9111/buildConfiguration/TweetTrendNew_Build/106?expandBuildChangesSection=true&hideTestsFromDependencies=false&hideProblemsFromDependencies=false&expandBuildDeploymentsSection=false" | jq -r '.status')
+        echo "Build status: $STATUS"
+        echo "STATUS=$STATUS" >> $GITHUB_ENV
 
     - name: Fail or Pass PR Based on Build Status
       id: evaluate-status
       run: |
-        STATUS="${{ steps.get-build-status.outputs.result }}"
-        
+        # Check if the build status is 'SUCCESS'
         if [ "$STATUS" != "SUCCESS" ]; then
           echo "Build status is not successful. Failing the workflow."
           exit 1
@@ -38,11 +34,11 @@ jobs:
     - name: Create Pull Request
       if: ${{ steps.evaluate-status.outcome == 'success' }}
       uses: actions/github-script@v6
-
-
       with:
         script: |
-          const octokit = require('@actions/github').getOctokit(process.env.GITHUB_TOKEN);
+          const { getOctokit, context } = require('@actions/github');
+          const octokit = getOctokit(process.env.GITHUB_TOKEN);
+          
           const { data: pullRequest } = await octokit.rest.pulls.create({
             owner: context.repo.owner,
             repo: context.repo.repo,
