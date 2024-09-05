@@ -17,7 +17,7 @@ jobs:
       id: get-build-status
       run: |
         # Use curl to fetch build status
-        STATUS=$(curl -s "http://localhost:9111/buildConfiguration/TweetTrendNew_Build/106?expandBuildChangesSection=true&hideTestsFromDependencies=false&hideProblemsFromDependencies=false&expandBuildDeploymentsSection=false" | jq -r '.status')
+        STATUS=$(curl -s curl -s http://localhost:9111/buildConfiguration/TweetTrendNew_Build/127 | jq -r ".status")
         echo "Build status: $STATUS"
         echo "STATUS=$STATUS" >> $GITHUB_ENV
 
