@@ -15,18 +15,20 @@ jobs:
 
     - name: Get Build Status
       id: get-build-status
-      uses: actions/http-client@v2
+      uses: actions/github-script@v6
       with:
-        url: "http://localhost:9111/buildConfiguration/TweetTrendNew_Build/106?expandBuildChangesSection=true&hideTestsFromDependencies=false&hideProblemsFromDependencies=false&expandBuildDeploymentsSection=false"  # URL to check build status
-        method: GET
+        script: |
+          const fetch = require('node-fetch');
+          const response = await fetch('http://localhost:9111/buildConfiguration/TweetTrendNew_Build/106?expandBuildChangesSection=true&hideTestsFromDependencies=false&hideProblemsFromDependencies=false&expandBuildDeploymentsSection=false');
+          const data = await response.json();
+          console.log('Build status:', data.status);
+          return data.status;
 
     - name: Fail or Pass PR Based on Build Status
       id: evaluate-status
       run: |
-        # Extract the build status from the response
-        STATUS=$(echo "${{ steps.get-build-status.outputs.response }}" | jq -r '.status')  # Adjust if your response format is different
-
-        # Check if the build status is 'SUCCESS'
+        STATUS="${{ steps.get-build-status.outputs.result }}"
+        
         if [ "$STATUS" != "SUCCESS" ]; then
           echo "Build status is not successful. Failing the workflow."
           exit 1
@@ -35,10 +37,18 @@ jobs:
 
     - name: Create Pull Request
       if: ${{ steps.evaluate-status.outcome == 'success' }}
-      uses: github/gh-actions@v2
+      uses: actions/github-script@v6
+
+
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        base: main
-        head: ${{ github.head_ref }}
-        title: 'Pull Request Title'
-        body: 'Pull Request Body'
+        script: |
+          const octokit = require('@actions/github').getOctokit(process.env.GITHUB_TOKEN);
+          const { data: pullRequest } = await octokit.rest.pulls.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: 'Pull Request Title',
+            head: context.ref,
+            base: 'main',
+            body: 'Pull Request Body'
+          });
+          console.log(`Pull request created: ${pullRequest.html_url}`);
