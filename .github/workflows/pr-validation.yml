@@ -19,7 +19,7 @@ jobs:
         # Capture the output of the curl command in a variable
         $output = curl -u teamcity:Teamcity@098 -s http://localhost:9111/app/rest/builds/id:127
         
-        # Use echo to display the captured output
+        # Use Write-Output to display the captured output
         Write-Output $output
 
         # Use curl to fetch build status and parse JSON using PowerShell
@@ -28,7 +28,7 @@ jobs:
         $STATUS = $json.status
         Write-Output "Build status: $STATUS"
         echo "STATUS=$STATUS" >> $env:GITHUB_ENV
-      shell: pwsh
+      shell: powershell
 
     - name: Fail or Pass PR Based on Build Status
       id: evaluate-status
@@ -39,7 +39,7 @@ jobs:
           exit 1
         }
         Write-Output "Build status is successful. Proceeding."
-      shell: pwsh
+      shell: powershell
 
     - name: Create Pull Request
       if: ${{ steps.evaluate-status.outcome == 'success' }}
