@@ -15,23 +15,26 @@ jobs:
 
     - name: Get Build Status
       id: get-build-status
-      run: |
-        # Capture the output of the curl command in a variable
-        $output = curl -u teamcity:Teamcity@098 -s http://localhost:9111/app/rest/builds/id:127
-        
-        # Use Write-Output to display the captured output
-        Write-Output $output
-
-        # Use curl to fetch build status and parse JSON using PowerShell
-        $response = curl -u teamcity:Teamcity@098 -s http://localhost:9111/app/rest/builds/id:127
-        $json = $response | ConvertFrom-Json
-        $STATUS = $json.status
-        Write-Output "Build status: $STATUS"
-        echo "STATUS=$STATUS" >> $env:GITHUB_ENV
       shell: powershell
+      run: |
+        # Use Invoke-RestMethod to fetch build status
+        $url = "http://localhost:9111/app/rest/builds/id:127"
+        $username = "teamcity"
+        $password = "Teamcity@098"
+        $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
+        $credentials = New-Object System.Management.Automation.PSCredential($username, $securePassword)
+
+        # Fetch the response
+        $response = Invoke-RestMethod -Uri $url -Method Get -Credential $credentials
+        $STATUS = $response.status
+        Write-Output "Build status: $STATUS"
+
+        # Set environment variable for the next steps
+        echo "STATUS=$STATUS" >> $env:GITHUB_ENV
 
     - name: Fail or Pass PR Based on Build Status
       id: evaluate-status
+      shell: powershell
       run: |
         # Check if the build status is 'SUCCESS'
         if ($env:STATUS -ne "SUCCESS") {
@@ -39,7 +42,6 @@ jobs:
           exit 1
         }
         Write-Output "Build status is successful. Proceeding."
-      shell: powershell
 
     - name: Create Pull Request
       if: ${{ steps.evaluate-status.outcome == 'success' }}
