@@ -19,45 +19,18 @@ jobs:
       run: |
         # Define the URL and token
         $url = "http://localhost:9111/app/rest/builds/id:148"
-        $token = "${{ secrets.TEAMCITY_TOKEN }}"  # Use GitHub Actions secrets for the token
-        
-        # Create the headers with the token
+        $token = "${{ secrets.TEAMCITY_TOKEN }}"
         $headers = @{
             "Authorization" = "Bearer $token"
         }
+        $response = Invoke-RestMethod -Uri $url -Method Get -Headers $headers -ContentType "application/xml"
         
-        try {
-            # Fetch the build status
-            $response = Invoke-RestMethod -Uri $url -Method Get -Headers $headers -ContentType "application/xml" -Verbose
-            
-            # Convert response to XML
-            [xml]$xml = $response
-            
-            # Extract information from XML
-            $buildId = $xml.build.id
-            $status = $xml.build.status
-            $state = $xml.build.state
-            $startDate = $xml.build.startDate
-            $finishDate = $xml.build.finishDate
-            $statusText = $xml.build.statusText
-            
-            # Output the extracted information
-            Write-Output "Build ID: $buildId"
-            Write-Output "Status: $status"
-            Write-Output "State: $state"
-            Write-Output "Start Date: $startDate"
-            Write-Output "Finish Date: $finishDate"
-            Write-Output "Status Text: $statusText"
-            
-            # Set the STATUS environment variable for the subsequent steps
-            Add-Content -Path $env:GITHUB_ENV -Value "STATUS=$status"
-        } catch {
-            # Output detailed error information
-            Write-Output "Error fetching build status:"
-            Write-Output $_.Exception.Message
-            Write-Output $_.Exception.StackTrace
-            exit 1
-        }
+        # Extract and output the build status
+        $STATUS = [xml]$response.status
+        Write-Output "Build status: $STATUS"
+        
+        # Set the STATUS environment variable for the subsequent steps
+        Add-Content -Path $env:GITHUB_ENV -Value "STATUS=$STATUS"
 
     - name: Fail or Pass PR Based on Build Status
       id: evaluate-status
@@ -75,19 +48,23 @@ jobs:
       uses: actions/github-script@v6
       with:
         script: |
-          const { getOctokit } = require('@actions/github');
+          const { getOctokit, context } = require('@actions/github');
           const octokit = getOctokit(process.env.GITHUB_TOKEN);
-          
-          // Use the context from the GitHub Action environment
-          const { context } = require('@actions/github');
-          
-          // Create a pull request
-          const { data: pullRequest } = await octokit.rest.pulls.create({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            title: 'Pull Request Title',
-            head: context.ref.replace('refs/heads/', ''),  // Ensure to provide the branch name correctly
-            base: 'main',
-            body: 'Pull Request Body'
-          });
-          console.log(`Pull request created: ${pullRequest.html_url}`);
+
+          async function createPullRequest() {
+            try {
+              const { data: pullRequest } = await octokit.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: 'Pull Request Title',
+                head: context.ref.replace('refs/heads/', ''), // Ensure to provide the branch name correctly
+                base: 'main',
+                body: 'Pull Request Body'
+              });
+              console.log(`Pull request created: ${pullRequest.html_url}`);
+            } catch (error) {
+              console.error(`Error creating pull request: ${error.message}`);
+            }
+          }
+
+          createPullRequest();
