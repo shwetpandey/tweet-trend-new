@@ -75,14 +75,18 @@ jobs:
       uses: actions/github-script@v6
       with:
         script: |
-          const { getOctokit, context } = require('@actions/github');
+          const { getOctokit } = require('@actions/github');
           const octokit = getOctokit(process.env.GITHUB_TOKEN);
           
+          // Use the context from the GitHub Action environment
+          const { context } = require('@actions/github');
+          
+          // Create a pull request
           const { data: pullRequest } = await octokit.rest.pulls.create({
             owner: context.repo.owner,
             repo: context.repo.repo,
             title: 'Pull Request Title',
-            head: context.ref,
+            head: context.ref.replace('refs/heads/', ''),  // Ensure to provide the branch name correctly
             base: 'main',
             body: 'Pull Request Body'
           });
