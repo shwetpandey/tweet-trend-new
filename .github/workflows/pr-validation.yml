@@ -18,24 +18,35 @@ jobs:
       shell: powershell
       run: |
         # Use Invoke-RestMethod to fetch build status
-        $url = "http://localhost:9111/app/rest/builds/id:148"
+        $url = "http://localhost:9111/app/rest/builds/id:127"
         $username = "teamcity"
         $password = "Teamcity@098"
         $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
         $credentials = New-Object System.Management.Automation.PSCredential($username, $securePassword)
 
         # Fetch the response
-        $response = Invoke-RestMethod -Uri $url -Method Get -Credential $credentials
-        $STATUS = $response.status
-        Write-Output "Build status: $STATUS"
-
-        # Set environment variable for the next steps
-        echo "STATUS=$STATUS" >> $env:GITHUB_ENV
+        try {
+            $response = Invoke-RestMethod -Uri $url -Method Get -Credential $credentials
+            $STATUS = $response.status
+            Write-Output "Build status: $STATUS"
+            # Set environment variable for the next steps
+            echo "STATUS=$STATUS" >> $env:GITHUB_ENV
+        }
+        catch {
+            Write-Error "Failed to fetch build status: $_"
+            exit 1
+        }
 
     - name: Fail or Pass PR Based on Build Status
       id: evaluate-status
       shell: powershell
       run: |
+        # Ensure the STATUS environment variable is properly set
+        if (-not $env:STATUS) {
+          Write-Error "STATUS environment variable is not set. Exiting."
+          exit 1
+        }
+
         # Check if the build status is 'SUCCESS'
         if ($env:STATUS -ne "SUCCESS") {
           Write-Output "Build status is not successful. Failing the workflow."
