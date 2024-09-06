@@ -18,13 +18,13 @@ jobs:
       id: get-build-status
       run: |
         # Capture the output of the curl command in a variable
-        output=$(curl -s http://localhost:9111/buildConfiguration/TweetTrendNew_Build/127)
+        output=$(curl -u teamcity:Teamcity@098 -s http://localhost:9111/app/rest/builds/id:127)
 
         # Use echo to display the captured output
         echo "$output"
 
         # Use curl to fetch build status
-        STATUS=$(curl -s curl -s http://localhost:9111/buildConfiguration/TweetTrendNew_Build/127 | jq -r ".status")
+        STATUS=$(curl -u teamcity:Teamcity@098 -s http://localhost:9111/app/rest/builds/id:127 | jq -r ".status")
         echo "Build status: $STATUS"
         echo "STATUS=$STATUS" >> $GITHUB_ENV
 
