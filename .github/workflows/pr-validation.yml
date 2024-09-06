@@ -17,12 +17,17 @@ jobs:
       id: get-build-status
       shell: powershell
       run: |
-        # Use Invoke-RestMethod to fetch build status
+        # Define the URL and credentials
         $url = "http://localhost:9111/app/rest/builds/id:148"
         $username = "teamcity"
         $password = "Teamcity@098"
         
-        $response = Invoke-RestMethod -Uri $url -Method Get -Credential (New-Object PSCredential($username, (ConvertTo-SecureString $password -AsPlainText -Force))) -UseDefaultCredentials
+        # Create the credential object
+        $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
+        $credential = New-Object PSCredential($username, $securePassword)
+        
+        # Fetch the build status using Invoke-RestMethod
+        $response = Invoke-RestMethod -Uri $url -Method Get -Credential $credential
         
         # Output the response
         Write-Output "Response: $response"
