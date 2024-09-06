@@ -17,27 +17,47 @@ jobs:
       id: get-build-status
       shell: powershell
       run: |
-        # Define the URL and credentials
+        # Define the URL and token
         $url = "http://localhost:9111/app/rest/builds/id:148"
-        $username = "teamcity"
-        $password = "Teamcity@098"
+        $token = "${{ secrets.TEAMCITY_TOKEN }}"  # Use GitHub Actions secrets for the token
         
-        # Create the credential object
-        $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
-        $credential = New-Object PSCredential($username, $securePassword)
+        # Create the headers with the token
+        $headers = @{
+            "Authorization" = "Bearer $token"
+        }
         
-        # Fetch the build status using Invoke-RestMethod
-        $response = Invoke-RestMethod -Uri $url -Method Get -Credential $credential
-        
-        # Output the response
-        Write-Output "Response: $response"
-        
-        # Extract and output the build status
-        $STATUS = $response.status
-        Write-Output "Build status: $STATUS"
-        
-        # Set the STATUS environment variable for the subsequent steps
-        Add-Content -Path $env:GITHUB_ENV -Value "STATUS=$STATUS"
+        try {
+            # Fetch the build status
+            $response = Invoke-RestMethod -Uri $url -Method Get -Headers $headers -ContentType "application/xml" -Verbose
+            
+            # Convert response to XML
+            [xml]$xml = $response
+            
+            # Extract information from XML
+            $buildId = $xml.build.id
+            $status = $xml.build.status
+            $state = $xml.build.state
+            $startDate = $xml.build.startDate
+            $finishDate = $xml.build.finishDate
+            $statusText = $xml.build.statusText
+            
+            # Output the extracted information
+            Write-Output "Build ID: $buildId"
+            Write-Output "Status: $status"
+            Write-Output "State: $state"
+            Write-Output "Start Date: $startDate"
+            Write-Output "Finish Date: $finishDate"
+            Write-Output "Status Text: $statusText"
+            
+            # Set the STATUS environment variable for the subsequent steps
+            Add-Content -Path $env:GITHUB_ENV -Value "STATUS=$status"
+        } catch {
+            # Output detailed error information
+            Write-Output "Error fetching build status:"
+            Write-Output $_.Exception.Message
+            Write-Output $_.Exception.StackTrace
+            exit 1
+        }
 
     - name: Fail or Pass PR Based on Build Status
       id: evaluate-status
