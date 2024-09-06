@@ -18,7 +18,7 @@ jobs:
       shell: powershell
       run: |
         # Use Invoke-RestMethod to fetch build status
-        $url = "http://localhost:9111/app/rest/builds/id:127"
+        $url = "http://localhost:9111/app/rest/builds/id:148"
         $username = "teamcity"
         $password = "Teamcity@098"
         $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
